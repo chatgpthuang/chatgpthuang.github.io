@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ChatGPT对话系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+  <body>
+    <h1>ChatGPT对话系统</h1>
+    <div>
+      <label for="user-input">请输入：</label>
+      <input type="text" id="user-input">
+      <button onclick="sendMessage()">发送</button>
+      <button onclick="startNewConversation()">开始新的对话</button>
+    </div>
+    <ul id="conversation"></ul>
+    <div id="remaining"></div>
+    <script>
+      const conversation = document.getElementById("conversation");
+      const userInput = document.getElementById("user-input");
+      const remaining = document.getElementById("remaining");
+      let remainingAmount = 100.0;
+      let conversationPrompt = "";
+
+      const sendMessage = async () => {
+        const message = userInput.value;
+        const response = await axios.post(
+          "https://api.openai.com/v1/engines/davinci-codex/completions",
+          {
+            prompt: conversationPrompt + `user: ${message}\nchatbot:`,
+            max_tokens: 60,
+            n: 1,
+            stop: "\n",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const chatbotMessage = response.data.choices[0].text.trim();
+        const cost = response.headers["openai-usage"][0].cost;
+        remainingAmount -= parseFloat(cost);
+        addMessage("user", message);
+        addMessage("chatbot", chatbotMessage);
+        remaining.innerHTML = `本次对话消耗金额：${cost}，剩余金额：${remainingAmount.toFixed(
+          2
+        )}`;
+        userInput.value = "";
+        conversationPrompt += `user: ${message}\nchatbot: ${chatbotMessage}\n`;
+      };
+
+      const startNewConversation = () => {
+        conversation.innerHTML = "";
+        remainingAmount = 100.0;
+        conversationPrompt = "";
+      };
+
+      const addMessage = (sender, message) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${sender}:</strong> ${message}`;
+        conversation.appendChild(li);
+      };
+    </script>
+  </body>
+</html>
